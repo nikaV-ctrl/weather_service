@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:weather_service_app/features/home/bloc/weather_bloc.dart';
@@ -5,6 +7,8 @@ import 'package:weather_service_app/features/home/pages/weather_screen.dart';
 import 'package:weather_service_app/features/home/repository/weather_repository.dart';
 import 'package:weather_service_app/resources/app_colors.dart';
 import 'package:weather_service_app/resources/app_images.dart';
+import 'package:weather_service_app/utils/get_weather_from_storage.dart';
+import 'package:weather_service_app/utils/set_weather_to_storage.dart';
 import 'package:weather_service_app/widgets/column_space.dart';
 import 'package:weather_service_app/widgets/custom_text_field.dart';
 import 'package:weather_service_app/widgets/filled_btn.dart';
@@ -17,14 +21,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  
   final TextEditingController cityController = TextEditingController();
   late WeatherBLoC weatherBLoC;
 
   @override
   void initState() {
     super.initState();
-
     weatherBLoC = WeatherBLoC(
       weatherRepository: WeatherRepository(),
     );
@@ -82,29 +84,40 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const ColumnSpace(20),
                 BlocConsumer<WeatherBLoC, WeatherState>(
-                  listener: (context, state) {
-                    state.whenOrNull(
-                      success: (weatherResponse) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: ((context) => WeatherScreen(weatherResponse: weatherResponse))
-                          )
-                        );
-                      },
-                    );
-                  },
-                  builder: (context, state) => state.maybeWhen(
-                    orElse: () => const SizedBox.shrink(),
-                    inProgress: () => const CircularProgressIndicator(
-                      color: AppColors.yellow,
-                    ),
-                    error: (message) => Text(message),
-                    success: (weatherResponse) {
-                      return const SizedBox.shrink();
+                    listener: (context, state) {
+                      state.whenOrNull(
+                        success: (weatherResponse) {
+                          setWeatherToStorage(weatherResponse);
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: ((context) => WeatherScreen(
+                                      weatherResponse: weatherResponse))));
+                        },
+                        error: (message) async {
+                          if (message == 'Нет подключения к Интернету') {
+                            final response = await getWeatherFromStorage();
+                            response.name != null
+                                ? Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: ((context) => WeatherScreen(
+                                            weatherResponse: response))))
+                                : null;
+                          }
+                        },
+                      );
                     },
-                  )
-                )
+                    builder: (context, state) => state.maybeWhen(
+                          orElse: () => const SizedBox.shrink(),
+                          inProgress: () => const CircularProgressIndicator(
+                            color: AppColors.yellow,
+                          ),
+                          error: (message) => Text(message),
+                          success: (weatherResponse) {
+                            return const SizedBox.shrink();
+                          },
+                        ))
               ],
             ),
           ),

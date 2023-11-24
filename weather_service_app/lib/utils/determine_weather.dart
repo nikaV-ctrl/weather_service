@@ -1,5 +1,3 @@
-
-
 import 'package:weather_service_app/resources/app_svg_images.dart';
 
 String determineWeather(String weather) {
@@ -25,8 +23,6 @@ String determineWeather(String weather) {
      weatherIcon = AppSvgImages.rain;
      break;
   }
-
-
   
   return weatherIcon;
 }
